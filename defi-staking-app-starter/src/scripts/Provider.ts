@@ -1,173 +1,164 @@
 import { ethers } from "ethers";
 import { ExternalProvider } from "@ethersproject/providers/lib/web3-provider";
-import Tether from '../truffle_abis/Tether.json';
-import RWD from '../truffle_abis/RWD.json';
-import DecentralBank from '../truffle_abis/DecentralBank.json';
+import Tether from "../truffle_abis/Tether.json";
+import RWD from "../truffle_abis/RWD.json";
+import DecentralBank from "../truffle_abis/DecentralBank.json";
 import Web3 from "web3";
 import { sleep } from "./utils";
 
-
 interface ExternalProviderExtended extends ExternalProvider {
-    networkVersion?: string;
+  networkVersion?: string;
 }
 
 export class Provider {
-    private provider: ethers.providers.Web3Provider;
-    private _isConnected = false;
-    private contracts: {
-        "tether": ethers.Contract | null,
-        "rwd": ethers.Contract | null,
-        "decentralBank": ethers.Contract | null,
-    } = {
-            "tether": null,
-            "rwd": null,
-            "decentralBank": null
-        };
+  private provider: ethers.providers.Web3Provider;
+  private _isConnected = false;
+  private contracts: {
+    tether: ethers.Contract | null;
+    rwd: ethers.Contract | null;
+    decentralBank: ethers.Contract | null;
+  } = {
+    tether: null,
+    rwd: null,
+    decentralBank: null,
+  };
 
-    public constructor() {
-        this.provider = new ethers.providers.Web3Provider((window as any).ethereum);
-    }
+  public constructor() {
+    this.provider = new ethers.providers.Web3Provider((window as any).ethereum);
+  }
 
-    /**
-     * Load ContractObject
-     * ABI (Application Binary Interface)
-     * @returns 
-     */
-    public async loadContracts() {
-        const signer = this.provider.getSigner();
+  /**
+   * Load ContractObject
+   * ABI (Application Binary Interface)
+   * @returns
+   */
+  public async loadContracts() {
+    const signer = this.provider.getSigner();
 
-        return new Promise((resolve, rejected) => {
-            const loadContractsPromise = async (
-                retry_ws: number,
-                resolve: (success: boolean) => void,
-                rejected: (reason?: any) => void
-            ) => {
-                // NetID Can be a little bit long to load
-                await sleep(1 * 1000 * 0.3);
+    return new Promise((resolve, rejected) => {
+      const loadContractsPromise = async (retry_ws: number, resolve: (success: boolean) => void, rejected: (reason?: any) => void) => {
+        // NetID Can be a little bit long to load
+        await sleep(1 * 1000 * 0.3);
 
-                let providerExtended = this.provider.provider as ExternalProviderExtended;
-                let netID = providerExtended.networkVersion;
+        let providerExtended = this.provider.provider as ExternalProviderExtended;
+        let netID = providerExtended.networkVersion;
 
-                console.debug("netID", netID);
-                if (!netID) {
-                    retry_ws++;
-                    if (retry_ws < 4) {
-                        setTimeout(() => {
-                            loadContractsPromise(retry_ws, resolve, rejected);
-                        }, 300);
-                    } else {
-                        rejected({
-                            message: "netID problem...",
-                        });
-                    }
-                }
-                else{
-                    const tetherData = Tether.networks[netID as keyof typeof Tether.networks];
-                    const rwdData = RWD.networks[netID as keyof typeof RWD.networks];
-                    const decentralBankData = DecentralBank.networks[netID as keyof typeof DecentralBank.networks];
-                    if (tetherData) {
-                        this.contracts.tether = new ethers.Contract(tetherData.address, Tether.abi, signer);
-                    }
-                    if (rwdData) {
-                        this.contracts.rwd = new ethers.Contract(rwdData.address, RWD.abi, signer);
-                    }
-                    if (decentralBankData) {
-                        this.contracts.decentralBank = new ethers.Contract(decentralBankData.address, DecentralBank.abi, signer);
-                    }
+        console.debug("netID", netID);
+        if (!netID) {
+          retry_ws++;
+          if (retry_ws < 4) {
+            setTimeout(() => {
+              loadContractsPromise(retry_ws, resolve, rejected);
+            }, 300);
+          } else {
+            rejected({
+              message: "netID problem...",
+            });
+          }
+        } else {
+          const tetherData = Tether.networks[netID as keyof typeof Tether.networks];
+          const rwdData = RWD.networks[netID as keyof typeof RWD.networks];
+          const decentralBankData = DecentralBank.networks[netID as keyof typeof DecentralBank.networks];
+          if (tetherData) {
+            this.contracts.tether = new ethers.Contract(tetherData.address, Tether.abi, signer);
+          }
+          if (rwdData) {
+            this.contracts.rwd = new ethers.Contract(rwdData.address, RWD.abi, signer);
+          }
+          if (decentralBankData) {
+            this.contracts.decentralBank = new ethers.Contract(decentralBankData.address, DecentralBank.abi, signer);
+          }
 
-                    this._isConnected = true;
-    
-                    resolve(true);
-                }
-            };
+          this._isConnected = true;
 
-            loadContractsPromise(0, resolve, rejected)
-        });
-    }
-
-    public async getTether(): Promise<{ balance: string, symbol: string } | null> {
-        if (!this.contracts.tether) return null;
-
-        const account = await this.getAccountNumber();
-        const accountBalance = await this.contracts.tether.balanceOf(account);
-
-        const balance = Web3.utils.fromWei(accountBalance.toString(), 'ether');
-        const symbol = await this.contracts.tether.symbol();
-
-        return {
-            balance,
-            symbol
+          resolve(true);
         }
-    }
+      };
 
-    public async getRWD(): Promise<{ balance: string, symbol: string } | null> {
-        if (!this.contracts.rwd) return null;
+      loadContractsPromise(0, resolve, rejected);
+    });
+  }
 
-        const account = await this.getAccountNumber();
-        const accountBalance = await this.contracts.rwd.balanceOf(account);
+  public async getTether(): Promise<{ balance: string; symbol: string } | null> {
+    if (!this.contracts.tether) return null;
 
-        const balance = Web3.utils.fromWei(accountBalance.toString(), 'ether');
-        const symbol = await this.contracts.rwd.symbol();
+    const account = await this.getAccountNumber();
+    const accountBalance = await this.contracts.tether.balanceOf(account);
 
-        return {
-            balance,
-            symbol
-        }
-    }
+    const balance = Web3.utils.fromWei(accountBalance.toString(), "ether");
+    const symbol = await this.contracts.tether.symbol();
 
-    public async getStakingBalance(): Promise<{ balance: string, symbol: string } | null> {
-        if(!this.contracts.tether || !this.contracts.decentralBank) return null;
+    return {
+      balance,
+      symbol,
+    };
+  }
 
-        const account = await this.getAccountNumber();
-        const accountBalance = await this.contracts.decentralBank.stakingBalance(account);
-        const balance = Web3.utils.fromWei(accountBalance.toString(), 'ether');
+  public async getRWD(): Promise<{ balance: string; symbol: string } | null> {
+    if (!this.contracts.rwd) return null;
 
-        const symbol = await this.contracts.tether.symbol();
+    const account = await this.getAccountNumber();
+    const accountBalance = await this.contracts.rwd.balanceOf(account);
 
-        return {
-            balance,
-            symbol
-        }
-    }
+    const balance = Web3.utils.fromWei(accountBalance.toString(), "ether");
+    const symbol = await this.contracts.rwd.symbol();
 
-    public async stakeTokens(amount: string) {
-        if(!this.contracts.tether || !this.contracts.decentralBank)
-            return;
+    return {
+      balance,
+      symbol,
+    };
+  }
 
-        amount = Web3.utils.toWei(amount, 'ether');
+  public async getStakingBalance(): Promise<{ balance: string; symbol: string } | null> {
+    if (!this.contracts.tether || !this.contracts.decentralBank) return null;
 
-        const transferResultApprove = await this.contracts.tether.approve(this.contracts.decentralBank.address, amount)
-        console.debug("approve::transferResult", transferResultApprove);
-        if(!this.contracts.decentralBank)
-            return;
+    const account = await this.getAccountNumber();
+    const accountBalance = await this.contracts.decentralBank.stakingBalance(account);
+    const balance = Web3.utils.fromWei(accountBalance.toString(), "ether");
 
-        const transferResultDepositToken = await this.contracts.decentralBank.depositToken(amount);
-        console.debug("depositToken::transferResultDepositToken", transferResultDepositToken);
-    }
+    const symbol = await this.contracts.tether.symbol();
 
-    public async unstakeTokens() {
-        if(!this.contracts.decentralBank)
-            return;
+    return {
+      balance,
+      symbol,
+    };
+  }
 
-        console.debug(this.contracts.decentralBank?.address);
+  public async stakeTokens(amount: string) {
+    if (!this.contracts.tether || !this.contracts.decentralBank) return;
 
-        this.contracts.decentralBank.unstakeTokens().then((transferResult:any) => {
-            console.debug("unstakeTokens::transferResult", transferResult);
-        });
-    }
+    amount = Web3.utils.toWei(amount, "ether");
 
-    public async getAccountNumber(): Promise<string> {
-        const accounts = await this.provider.listAccounts();
-        return accounts[0];
-    }
+    const transferResultApprove = await this.contracts.tether.approve(this.contracts.decentralBank.address, amount);
+    console.debug("approve::transferResult", transferResultApprove);
+    if (!this.contracts.decentralBank) return;
 
-    public async getAccountBalance(): Promise<number> {
-        const account = await this.getAccountNumber();
-        let balanceBig = await this.provider.getBalance(account)
-        return parseFloat(ethers.utils.formatEther(balanceBig));
-    }
+    const transferResultDepositToken = await this.contracts.decentralBank.depositToken(amount);
+    console.debug("depositToken::transferResultDepositToken", transferResultDepositToken);
+  }
 
-    public get isConnected() {
-        return this._isConnected;
-    }
+  public async unstakeTokens() {
+    if (!this.contracts.decentralBank) return;
+
+    console.debug(this.contracts.decentralBank?.address);
+
+    this.contracts.decentralBank.unstakeTokens().then((transferResult: any) => {
+      console.debug("unstakeTokens::transferResult", transferResult);
+    });
+  }
+
+  public async getAccountNumber(): Promise<string> {
+    const accounts = await this.provider.listAccounts();
+    return accounts[0];
+  }
+
+  public async getAccountBalance(): Promise<number> {
+    const account = await this.getAccountNumber();
+    let balanceBig = await this.provider.getBalance(account);
+    return parseFloat(ethers.utils.formatEther(balanceBig));
+  }
+
+  public get isConnected() {
+    return this._isConnected;
+  }
 }

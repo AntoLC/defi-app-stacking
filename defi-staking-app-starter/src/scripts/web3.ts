@@ -1,7 +1,7 @@
 // This function detects most providers injected at window.ethereum
 import { ethers } from "ethers";
-import Tether from '../truffle_abis/Tether.json';
-import Web3 from 'web3';
+import Tether from "../truffle_abis/Tether.json";
+import Web3 from "web3";
 import { ExternalProvider } from "@ethersproject/providers/lib/web3-provider";
 
 /**
@@ -12,11 +12,11 @@ interface ExternalProviderExtended extends ExternalProvider {
 }
 
 export const loadWeb3 = async (): Promise<boolean> => {
-  const provider = new ethers.providers.Web3Provider((window as any).ethereum)
+  const provider = new ethers.providers.Web3Provider((window as any).ethereum);
   const signer = provider.getSigner();
 
   if (provider) {
-    console.log('provider', provider);
+    console.log("provider", provider);
 
     // Accounts
     const accounts = await provider.listAccounts();
@@ -24,7 +24,7 @@ export const loadWeb3 = async (): Promise<boolean> => {
 
     // Balance Accounts
     let balanceString = await provider.getBalance(accounts[0]);
-    let balance = ethers.utils.formatEther(balanceString)
+    let balance = ethers.utils.formatEther(balanceString);
     console.log("balance", balance);
 
     // NetID
@@ -32,8 +32,7 @@ export const loadWeb3 = async (): Promise<boolean> => {
     let netID = providerExtended.networkVersion;
     console.log("provider_networkVersion", netID);
 
-    if (!netID)
-      return false;
+    if (!netID) return false;
 
     const tetherData = Tether.networks[netID as keyof typeof Tether.networks];
     if (tetherData) {
@@ -50,26 +49,25 @@ export const loadWeb3 = async (): Promise<boolean> => {
       return true;
     }
   } else {
-    console.log('Please install MetaMask!');
+    console.log("Please install MetaMask!");
   }
 
   return false;
-}
+};
 
 export const loadWeb3Old = async () => {
-  const mywindow = (window as any);
+  const mywindow = window as any;
   if (mywindow.ethereum) {
     mywindow.web3 = new Web3(mywindow.ethereum);
     await mywindow.ethereum.enable();
 
     //setConnectionType("Connected Ethereum");
     console.debug("Connected Ethereum");
-  }
-  else if (mywindow.web3) {
+  } else if (mywindow.web3) {
     mywindow.web3 = new Web3(mywindow.web3.currentProvider);
     await mywindow.ethereum.enable();
 
     //setConnectionType("Connected currentProvider");
     console.debug("Connected currentProvider");
   }
-}
+};
