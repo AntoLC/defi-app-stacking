@@ -26,6 +26,10 @@ const InteractionToken = () => {
     provider.stakeTokens(deposit).then(() => setProvider(new Provider()));
   };
 
+  const handleClickWithdraw = () => {
+    provider.unstakeTokens().then(() => setProvider(new Provider()));
+  };
+
   return (
     <div className="InteractionToken_123fsf">
       <div className="container">
@@ -43,7 +47,7 @@ const InteractionToken = () => {
           <Button variant="primary" size="lg" onClick={() => handleClickDeposit()}>
             DEPOSIT
           </Button>
-          <Button variant="secondary" size="lg">
+          <Button variant="secondary" size="lg" onClick={() => handleClickWithdraw()}>
             Withdraw
           </Button>
         </div>

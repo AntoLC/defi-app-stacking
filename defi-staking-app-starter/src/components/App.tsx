@@ -14,12 +14,15 @@ export const ProviderContext = createContext({
 
 const App = () => {
   const [isConnected, setIsConnected] = useState(false);
+  const [error, setError] = useState("Connect your Metamask");
   const [provider, setProvider] = useState<Provider>(new Provider());
   const value = { provider, setProvider };
 
   useEffect(() => {
     setIsConnected(false);
-    provider.loadContracts().then(() => setIsConnected(true));
+    provider.loadContracts()
+    .then(() => setIsConnected(true))
+    .catch((err) => setError(err.message));
   }, [provider]);
 
   return (
@@ -52,7 +55,7 @@ const App = () => {
           <InteractionToken />
         </ProviderContext.Provider>
       ) : (
-        <></>
+        <div className="error_front">{error}</div>
       )}
     </div>
   );

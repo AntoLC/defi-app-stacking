@@ -11,7 +11,7 @@ interface ExternalProviderExtended extends ExternalProvider {
 }
 
 export class Provider {
-  private provider: ethers.providers.Web3Provider;
+  private provider: ethers.providers.Web3Provider | null;
   private _isConnected = false;
   private contracts: {
     tether: ethers.Contract | null;
@@ -24,7 +24,9 @@ export class Provider {
   };
 
   public constructor() {
-    this.provider = new ethers.providers.Web3Provider((window as any).ethereum);
+    this.provider = (window as any).ethereum 
+      ? new ethers.providers.Web3Provider((window as any).ethereum)
+      : null;
   }
 
   /**
@@ -33,13 +35,28 @@ export class Provider {
    * @returns
    */
   public async loadContracts() {
-    const signer = this.provider.getSigner();
-
     return new Promise((resolve, rejected) => {
+      const _rejected = () => {
+        rejected({
+          message: "Metamask not loaded...",
+        });
+      };
+
+      if(!this.provider){
+        _rejected();
+        return;
+      }
+
+      const signer = this.provider.getSigner();
+
       const loadContractsPromise = async (retry_ws: number, resolve: (success: boolean) => void, rejected: (reason?: any) => void) => {
         // NetID Can be a little bit long to load
         await sleep(1 * 1000 * 0.3);
 
+        if(!this.provider){
+          _rejected();
+          return;
+        }
         let providerExtended = this.provider.provider as ExternalProviderExtended;
         let netID = providerExtended.networkVersion;
 
@@ -52,7 +69,7 @@ export class Provider {
             }, 300);
           } else {
             rejected({
-              message: "netID problem...",
+              message: "Did you start Ganache?",
             });
           }
         } else {
@@ -142,17 +159,24 @@ export class Provider {
 
     console.debug(this.contracts.decentralBank?.address);
 
-    this.contracts.decentralBank.unstakeTokens().then((transferResult: any) => {
-      console.debug("unstakeTokens::transferResult", transferResult);
-    });
+    const transferResult = await this.contracts.decentralBank.unstakeTokens();
+    console.debug("unstakeTokens::transferResult", transferResult);
   }
 
   public async getAccountNumber(): Promise<string> {
+    if(!this.provider){
+      return "";
+    }
+
     const accounts = await this.provider.listAccounts();
     return accounts[0];
   }
 
   public async getAccountBalance(): Promise<number> {
+    if(!this.provider){
+      return 0;
+    }
+
     const account = await this.getAccountNumber();
     let balanceBig = await this.provider.getBalance(account);
     return parseFloat(ethers.utils.formatEther(balanceBig));
