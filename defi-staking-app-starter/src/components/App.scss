@@ -1,0 +1,14 @@
+.App_123fsf{
+    min-height: 100vh;
+    background: linear-gradient(to bottom, #242424 20%,#004b69 100%);
+    color:#fff;
+    overflow-y: hidden;
+
+    .particles{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 100px;
+    }
+}
